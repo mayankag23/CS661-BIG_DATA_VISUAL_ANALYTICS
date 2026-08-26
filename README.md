@@ -1,5 +1,5 @@
 # CS661 - Big Data Visual Analytics  
-## Social Media Engagement Pattern Visualization
+## Social Media Engagement Pattern Visualization and Starbucks Customer Segmentation
 
 ### Project Overview
 
