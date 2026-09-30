@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Social Media Platform Activities Radar Chart</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Poppins', sans-serif;
+      background: linear-gradient(135deg, #1a2a6c, #2c3e50);
+      color: #fff;
+      margin: 0;
+      padding: 20px;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    
+    .container {
+      max-width: 1200px;
+      width: 100%;
+      margin: 0 auto;
+    }
+    
+    header {
+      text-align: center;
+      padding: 30px 0;
+      margin-bottom: 20px;
+    }
+    
+    h1 {
+      font-size: 2.8rem;
+      margin-bottom: 10px;
+      background: linear-gradient(90deg, #4cc9f0, #f72585);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      text-shadow: 0 2px 10px rgba(0,0,0,0.3);
+    }
+    
+    .subtitle {
+      font-size: 1.2rem;
+      opacity: 0.8;
+      max-width: 700px;
+      margin: 0 auto;
+      line-height: 1.6;
+    }
+    
+    .controls {
+      display: flex;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 15px;
+      margin: 30px auto;
+      max-width: 800px;
+    }
+    
+    .activity-btn {
+      background: rgba(255, 255, 255, 0.1);
+      border: none;
+      border-radius: 50px;
+      padding: 12px 25px;
+      color: white;
+      font-size: 1rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    
+    .activity-btn:hover {
+      background: rgba(255, 255, 255, 0.2);
+      transform: translateY(-3px);
+    }
+    
+    .activity-btn.active {
+      background: rgba(76, 175, 80, 0.3);
+      box-shadow: 0 0 15px rgba(76, 175, 80, 0.3);
+      border: 1px solid rgba(76, 175, 80, 0.5);
+    }
+    
+    .chart-container {
+      position: relative;
+      width: 800px;
+      height: 600px;
+      max-width: 95%;
+      margin: 20px auto;
+    }
+    
+    .tooltip {
+      position: absolute;
+      padding: 15px 20px;
+      background: rgba(30, 41, 59, 0.95);
+      border-radius: 12px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+      pointer-events: none;
+      opacity: 0;
+      transition: all 0.2s ease-out;
+      font-size: 14px;
+      min-width: 200px;
+      z-index: 100;
+      transform: translate(-50%, -110%);
+      border-left: 4px solid;
+      backdrop-filter: blur(5px);
+    }
+    
+    .tooltip:after {
+      content: '';
+      position: absolute;
+      left: -10px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 0;
+      height: 0;
+      border-top: 8px solid transparent;
+      border-bottom: 8px solid transparent;
+      border-right: 8px solid;
+    }
+    
+    .tooltip.entertainment { border-color: #f72585; }
+    .tooltip.entertainment:after { border-right-color: #f72585; }
+    .tooltip.brand-research { border-color: #4895ef; }
+    .tooltip.brand-research:after { border-right-color: #4895ef; }
+    .tooltip.news { border-color: #f8961e; }
+    .tooltip.news:after { border-right-color: #f8961e; }
+    .tooltip.messaging { border-color: #4cc9f0; }
+    .tooltip.messaging:after { border-right-color: #4cc9f0; }
+    .tooltip.posting { border-color: #7209b7; }
+    .tooltip.posting:after { border-right-color: #7209b7; }
+    
+    .tooltip h3 {
+      margin-bottom: 8px;
+      color: #fff;
+      font-size: 1.2rem;
+    }
+    
+    .tooltip p {
+      margin: 5px 0;
+      display: flex;
+      justify-content: space-between;
+    }
+    
+    .tooltip .value {
+      font-weight: bold;
+      color: #4cc9f0;
+    }
+    
+    .legend {
+      display: flex;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 20px;
+      margin-top: 25px;
+      padding-top: 15px;
+      border-top: 1px solid rgba(255, 255, 255, 0.2);
+    }
+    
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    
+    .legend-color {
+      width: 20px;
+      height: 20px;
+      border-radius: 5px;
+      border: 2px solid;
+      background: transparent;
+    }
+    
+    .footer {
+      text-align: center;
+      margin-top: 40px;
+      padding: 20px;
+      font-size: 0.9rem;
+      opacity: 0.7;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>Social Media Platform Usage Patterns</h1>
+      <p class="subtitle">Interactive visualization of platform activities across entertainment, brand research, news, messaging, and content sharing</p>
+    </header>
+    
+    <div class="controls" id="activity-controls">
+      <button class="activity-btn active" data-activity="all">
+        <i class="fas fa-globe"></i> All Activities
+      </button>
+      <button class="activity-btn" data-activity="Entertainment">
+        <i class="fas fa-film"></i> Entertainment
+      </button>
+      <button class="activity-btn" data-activity="Brand Research">
+        <i class="fas fa-search-dollar"></i> Brand Research
+      </button>
+      <button class="activity-btn" data-activity="News and Current Events">
+        <i class="fas fa-newspaper"></i> News and Current Events
+      </button>
+      <button class="activity-btn" data-activity="Messaging">
+        <i class="fas fa-comments"></i> Messaging
+      </button>
+      <button class="activity-btn" data-activity="Posting Photos/Videos">
+        <i class="fas fa-camera"></i> Posting Photos/Videos
+      </button>
+    </div>
+    
+    <div class="chart-container">
+      <canvas id="radar-chart"></canvas>
+      <div id="tooltip" class="tooltip"></div>
+    </div>
+    
+    <div class="legend">
+      <div class="legend-item">
+        <div class="legend-color" style="border-color: #f72585"></div>
+        <span>Entertainment</span>
+      </div>
+      <div class="legend-item">
+        <div class="legend-color" style="border-color: #4895ef"></div>
+        <span>Brand Research</span>
+      </div>
+      <div class="legend-item">
+        <div class="legend-color" style="border-color: #f8961e"></div>
+        <span>News & Current Events</span>
+      </div>
+      <div class="legend-item">
+        <div class="legend-color" style="border-color: #4cc9f0"></div>
+        <span>Messaging</span>
+      </div>
+      <div class="legend-item">
+        <div class="legend-color" style="border-color: #7209b7"></div>
+        <span>Posting Photos/Videos</span>
+      </div>
+    </div>
+    
+    <div class="footer">
+      <p>Social Media Analytics Dashboard | Data Visualization | © 2023</p>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script>
+    // Data for the visualizations
+    const platforms = ["Facebook", "Instagram", "TikTok", "LinkedIn", "Snapchat", "X", "Reddit", "Pinterest"];
+    const activities = {
+      "Entertainment":  { values: [55.8, 67.1, 79.6, 11.7, 38.2, 35.6, 29.6, 21.4], color: "#f72585" },
+      "Brand Research": { values: [53.1, 62.3, 53.0, 25.8, 27.5, 37.5, 31.2, 36.4], color: "#4895ef" },
+      "News and Current Events": { values: [57.7, 55.0, 45.7, 29.5, 26.1, 60.5, 30.9, 14.6], color: "#f8961e" },
+      "Messaging":     { values: [72.1, 60.7, 23.8, 13.3, 42.2, 18.8, 7.6, 7.4], color: "#4cc9f0" },
+      "Posting Photos/Videos": { values: [63.0, 69.8, 43.5, 16.8, 45.3, 27.5, 12.9, 16.1], color: "#7209b7" }
+    };
+
+    let radarChart;
+    let selectedActivity = "all";
+
+    document.addEventListener('DOMContentLoaded', function() {
+      initializeChart();
+      setupEventListeners();
+    });
+
+    function setupEventListeners() {
+      const activityButtons = document.querySelectorAll('.activity-btn');
+      activityButtons.forEach(button => {
+        button.addEventListener('click', function() {
+          // Remove active class from all buttons
+          activityButtons.forEach(btn => btn.classList.remove('active'));
+          
+          // Add active class to clicked button
+          this.classList.add('active');
+          
+          // Update chart with selected activity
+          selectedActivity = this.getAttribute('data-activity');
+          updateChart();
+        });
+      });
+    }
+
+    function initializeChart() {
+      const ctx = document.getElementById('radar-chart').getContext('2d');
+      radarChart = new Chart(ctx, {
+        type: 'radar',
+        data: { labels: platforms, datasets: prepareDatasets() },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          animation: {
+            duration: 1000,
+            easing: 'easeOutQuart'
+          },
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              enabled: false,
+              external: function(context) {
+                const tooltip = document.getElementById('tooltip');
+                if (context.tooltip.opacity === 0) { 
+                  tooltip.style.opacity = 0; 
+                  return; 
+                }
+                
+                const data = context.tooltip.dataPoints[0];
+                const activity = data.dataset.label;
+                const activityClass = activity.toLowerCase().replace(/ /g, '-').replace(/\//g, '-').replace('and', '');
+                const platform = data.label;
+                const value = data.formattedValue;
+                
+                tooltip.innerHTML = `
+                  <h3>${platform}</h3>
+                  <p><strong>${activity}:</strong> <span class="value">${value}%</span></p>
+                  <p><strong>Platform Rank:</strong> ${platforms.indexOf(platform) + 1}/${platforms.length}</p>
+                `;
+                
+                tooltip.className = `tooltip ${activityClass}`;
+                const point = data.element;
+                const chartRect = context.chart.canvas.getBoundingClientRect();
+                
+                tooltip.style.left = (chartRect.left-220 + point.x) + 'px';
+                tooltip.style.top = (chartRect.top -120 + point.y) + 'px';
+                tooltip.style.opacity = 1;
+              }
+            }
+          },
+          scales: {
+            r: {
+              suggestedMin: 0,
+              suggestedMax: 100,
+              grid: {
+                color: 'rgba(255, 255, 255, 0.1)'
+              },
+              angleLines: {
+                color: 'rgba(255, 255, 255, 0.1)'
+              },
+              ticks: {
+                stepSize: 20,
+                backdropColor: 'transparent',
+                color: 'rgba(255, 255, 255, 0.7)',
+                font: {
+                  size: 12
+                },
+                callback: function(value) {
+                  return value + '%';
+                }
+              },
+              pointLabels: {
+                font: {
+                  size: 14,
+                  weight: 'bold'
+                },
+                color: '#ffffff'
+              }
+            }
+          },
+          elements: {
+            line: {
+              borderWidth: 3,
+              tension: 0.1
+            },
+            point: {
+              radius: 5,
+              hoverRadius: 8,
+              hoverBorderWidth: 2,
+              hoverBackgroundColor: '#ffffff'
+            }
+          }
+        }
+      });
+    }
+
+    function prepareDatasets() {
+      const datasets = [];
+      
+      if (selectedActivity === 'all') {
+        // Show all activities without fill
+        for (const [activity, data] of Object.entries(activities)) {
+          datasets.push({
+            label: activity,
+            data: data.values,
+            backgroundColor: 'transparent',
+            borderColor: data.color,
+            pointBackgroundColor: data.color,
+            pointBorderColor: '#fff',
+            borderWidth: 2,
+            pointRadius: 4,
+            pointHoverRadius: 7
+          });
+        }
+      } else {
+        // Show only selected activity without fill
+        const activityData = activities[selectedActivity];
+        datasets.push({
+          label: selectedActivity,
+          data: activityData.values,
+          backgroundColor: 'transparent',
+          borderColor: activityData.color,
+          pointBackgroundColor: activityData.color,
+          pointBorderColor: '#fff',
+          borderWidth: 3,
+          pointRadius: 5,
+          pointHoverRadius: 8
+        });
+      }
+      
+      return datasets;
+    }
+
+    function updateChart() {
+      radarChart.data.datasets = prepareDatasets();
+      radarChart.update();
+    }
+  </script>
+</body>
+</html>

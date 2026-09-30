@@ -1,0 +1,681 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student Data Correlation Analysis</title>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap">
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #2c5282;
+            --secondary: #3182ce;
+            --accent: #e53e3e;
+            --background: #f5f7fa;
+            --card-bg: #ffffff;
+            --text: #333333;
+            --border: #e2e8f0;
+        }
+        
+        body {
+            font-family: 'Roboto', sans-serif;
+            background-color: var(--background);
+            color: var(--text);
+            padding: 20px;
+            line-height: 1.6;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background-color: var(--card-bg);
+            border-radius: 12px;
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
+            overflow: hidden;
+        }
+        
+        header {
+            background: linear-gradient(90deg, #1a365d 0%, #2c5282 100%);
+            color: white;
+            padding: 25px 40px;
+            border-bottom: 1px solid var(--border);
+            text-align: center;
+        }
+        
+        h1 {
+            margin: 0;
+            font-size: 28px;
+            font-weight: 600;
+        }
+        
+        .content {
+            padding: 30px 40px;
+        }
+        
+        .chart-container {
+            margin-bottom: 40px;
+            padding: 20px;
+            background-color: var(--card-bg);
+            border-radius: 10px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+        }
+        
+        h2 {
+            color: var(--primary);
+            border-bottom: 3px solid var(--primary);
+            padding-bottom: 8px;
+            margin: 0 0 16px;
+            text-transform: uppercase;
+            font-size: 1.5rem;
+        }
+        
+        .correlation-container {
+            display: flex;
+            width: 100%;
+            min-height: 600px;
+            gap: 20px;
+        }
+        
+        #correlation-matrix {
+            flex: 1;
+            overflow: auto;
+        }
+        
+        #scatter-plot-container {
+            flex: 1;
+            border-left: 1px solid var(--border);
+            padding-left: 20px;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        #scatter-plot {
+            flex: 1;
+        }
+        
+        .matrix-cell {
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .matrix-cell:hover {
+            stroke: #333;
+            stroke-width: 2px;
+        }
+        
+        .matrix-label {
+            font-size: 12px;
+            text-anchor: middle;
+            dominant-baseline: middle;
+            fill: var(--text);
+        }
+        
+        .scatter-point {
+            fill-opacity: 0.7;
+            transition: r 0.3s;
+        }
+        
+        .scatter-point:hover {
+            r: 6;
+            fill-opacity: 1;
+            stroke: #333;
+        }
+        
+        .regression-line {
+            stroke: var(--accent);
+            stroke-width: 2px;
+            stroke-dasharray: 5,5;
+        }
+        
+        .axis-label {
+            font-size: 14px;
+            fill: var(--text);
+            font-weight: 500;
+        }
+        
+        .tooltip-correlation {
+            position: absolute;
+            padding: 12px;
+            background: rgba(255, 255, 255, 0.95);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: var(--text);
+            pointer-events: none;
+            font-size: 14px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+            z-index: 100;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        
+        .tooltip-correlation h3 {
+            margin: 0 0 8px 0;
+            color: var(--primary);
+            font-size: 15px;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 6px;
+        }
+        
+        .tooltip-correlation p {
+            margin: 5px 0;
+        }
+        
+        .tooltip-correlation .value {
+            font-weight: 600;
+            color: var(--primary);
+        }
+        
+        .plot-info {
+            margin-top: 20px;
+            font-size: 14px;
+            text-align: center;
+            padding: 10px;
+            background-color: #f8fafc;
+            border-radius: 8px;
+        }
+        
+        #correlation-value {
+            font-weight: bold;
+            color: var(--accent);
+            margin-top: 5px;
+        }
+        
+        .legend {
+            display: flex;
+            justify-content: center;
+            margin-top: 20px;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            margin: 5px 15px;
+        }
+        
+        .legend-color {
+            width: 20px;
+            height: 20px;
+            border-radius: 4px;
+        }
+        
+        .loading {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 400px;
+            font-size: 18px;
+            color: var(--secondary);
+        }
+        
+        .loading-spinner {
+            border: 4px solid rgba(0, 0, 0, 0.1);
+            border-radius: 50%;
+            border-top: 4px solid var(--secondary);
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin-right: 15px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .instructions {
+            background-color: #ebf8ff;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+            border-left: 4px solid var(--secondary);
+        }
+        
+        .error {
+            color: #e53e3e;
+            background: #fff5f5;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+            border-left: 3px solid #e53e3e;
+        }
+        
+        .upload-container {
+            margin: 20px 0;
+            padding: 15px;
+            background: #f0f9ff;
+            border-radius: 8px;
+            border: 1px dashed #90cdf4;
+            text-align: center;
+        }
+        
+        .upload-btn {
+            background: #3182ce;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background 0.3s;
+        }
+        
+        .upload-btn:hover {
+            background: #2c5282;
+        }
+        
+        footer {
+            text-align: center;
+            padding: 20px;
+            color: #718096;
+            font-size: 14px;
+            border-top: 1px solid var(--border);
+        }
+        
+        @media (max-width: 768px) {
+            .correlation-container {
+                flex-direction: column;
+            }
+            
+            #scatter-plot-container {
+                border-left: none;
+                border-top: 1px solid var(--border);
+                padding-left: 0;
+                padding-top: 20px;
+                margin-top: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Student Data Correlation Analysis</h1>
+        </header>
+        
+        <div class="content">
+            <div class="instructions">
+                <p><strong>How to use:</strong> Click on any cell in the correlation matrix to view the relationship between two variables. The scatter plot will update to show the data points with a trend line.</p>
+            </div>
+            
+            <section class="chart-container">
+                <h2>Correlation of Various Factors Among Students</h2>
+                <div class="correlation-container">
+                    <div id="correlation-matrix">
+                    </div>
+                    <div id="scatter-plot-container">
+                        <div id="scatter-plot">
+                            <div class="loading">
+                                <div class="loading-spinner"></div>
+                                <span>Preparing visualization...</span>
+                            </div>
+                        </div>
+                        <div class="plot-info">
+                            <p>Click on any cell in the correlation matrix to display the scatter plot</p>
+                            <p id="correlation-value"></p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="legend">
+                    <div class="legend-item">
+                        <div class="legend-color" style="background-color: #e74c3c;"></div>
+                        <span>Strong Negative Correlation</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background-color: #ecf0f1;"></div>
+                        <span>No Correlation</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background-color: #2ecc71;"></div>
+                        <span>Strong Positive Correlation</span>
+                    </div>
+                </div>
+            </section>
+            
+            <section>
+                <h2>About This Visualization</h2>
+                <p>This interactive dashboard allows educators and researchers to explore relationships between different aspects of student behavior and performance. The correlation matrix provides an overview of how different variables relate to each other, while the scatter plot shows the detailed relationship between any two selected variables.</p>
+                <p>Each point in the scatter plot represents an individual student. Hover over points to see detailed information about that student's metrics.</p>
+            </section>
+        </div>
+        
+        <footer>
+            <p>Student Data Correlation Visualization | D3.js Implementation</p>
+        </footer>
+    </div>
+    
+    <div class="tooltip-correlation"></div>
+    
+    <script>
+        // Function to calculate correlation coefficient
+        function calculateCorrelation(x, y) {
+            const n = x.length;
+            let sumX = 0, sumY = 0, sumXY = 0, sumX2 = 0, sumY2 = 0;
+            
+            for (let i = 0; i < n; i++) {
+                sumX += x[i];
+                sumY += y[i];
+                sumXY += x[i] * y[i];
+                sumX2 += x[i] * x[i];
+                sumY2 += y[i] * y[i];
+            }
+            
+            const numerator = n * sumXY - sumX * sumY;
+            const denominator = Math.sqrt((n * sumX2 - sumX * sumX) * (n * sumY2 - sumY * sumY));
+            
+            return denominator === 0 ? 0 : numerator / denominator;
+        }
+
+        // Function to create correlation matrix
+        function createCorrelationMatrix(data) {
+            // Remove student_ID from features
+            const features = Object.keys(data[0]).filter(key => key !== "student_ID");
+            const matrix = [];
+            
+            // Calculate correlations
+            for (let i = 0; i < features.length; i++) {
+                const row = [];
+                const xValues = data.map(d => +d[features[i]]);
+                
+                for (let j = 0; j < features.length; j++) {
+                    if (i === j) {
+                        row.push(1); // Correlation with itself is 1
+                    } else {
+                        const yValues = data.map(d => +d[features[j]]);
+                        const corr = calculateCorrelation(xValues, yValues);
+                        row.push(corr);
+                    }
+                }
+                matrix.push(row);
+            }
+            
+            return { matrix, features };
+        }
+
+        // Function to render correlation matrix
+        function renderCorrelationMatrix(container, matrixData) {
+    const { matrix, features } = matrixData;
+    const size = features.length;
+    const cellSize = 60;
+    
+    const paddingLeft = 120;
+    const paddingTop = 100;
+    const width = size * cellSize + paddingLeft + 20;
+    const height = size * cellSize + paddingTop + 20;
+
+    container.innerHTML = "";
+
+    const svg = d3.select(container)
+        .append("svg")
+        .attr("width", width)
+        .attr("height", height);
+
+    const colorScale = d3.scaleLinear()
+        .domain([-1, 0, 1])
+        .range(["#e74c3c", "#ecf0f1", "#2ecc71"]);
+
+    const cellData = [];
+    for (let i = 0; i < size; i++) {
+        for (let j = 0; j < size; j++) {
+            cellData.push({ i, j, value: matrix[i][j] });
+        }
+    }
+
+    // Matrix cells
+    svg.selectAll(".matrix-cell")
+        .data(cellData)
+        .enter()
+        .append("rect")
+        .attr("class", "matrix-cell")
+        .attr("x", d => paddingLeft + d.j * cellSize)
+        .attr("y", d => paddingTop + d.i * cellSize)
+        .attr("width", cellSize - 2)
+        .attr("height", cellSize - 2)
+        .attr("fill", d => colorScale(d.value))
+        .attr("stroke", "#fff")
+        .attr("stroke-width", 1)
+        .on("click", function (event, d) {
+            renderScatterPlot("#scatter-plot", studentData, features[d.i], features[d.j]);
+            document.getElementById("correlation-value").innerHTML =
+                `Correlation between ${features[d.i]} and ${features[d.j]}: ${d.value.toFixed(2)}`;
+        })
+        .on("mouseover", function (event, d) {
+            d3.select(".tooltip-correlation")
+                .style("opacity", 1)
+                .html(`<h3>${features[d.i]} vs ${features[d.j]}</h3>
+                       <p>Correlation: <span class="value">${d.value.toFixed(2)}</span></p>
+                       <p>Click to view scatter plot</p>`)
+                .style("left", (event.pageX + 10) + "px")
+                .style("top", (event.pageY - 30) + "px");
+
+            d3.select(this).attr("stroke", "#333").attr("stroke-width", 2);
+        })
+        .on("mouseout", function () {
+            d3.select(".tooltip-correlation").style("opacity", 0);
+            d3.select(this).attr("stroke", "#fff").attr("stroke-width", 1);
+        });
+
+    // Correlation values
+    svg.selectAll(".matrix-value")
+        .data(cellData)
+        .enter()
+        .append("text")
+        .attr("x", d => paddingLeft + d.j * cellSize + cellSize / 2)
+        .attr("y", d => paddingTop + d.i * cellSize + cellSize / 2)
+        .attr("text-anchor", "middle")
+        .attr("dominant-baseline", "middle")
+        .attr("font-size", "11px")
+        .attr("fill", d => Math.abs(d.value) > 0.5 ? "#fff" : "#333")
+        .text(d => d.value.toFixed(2));
+
+    // Row labels (left)
+    svg.selectAll(".row-label")
+        .data(features)
+        .enter()
+        .append("text")
+        .attr("x", paddingLeft - 10)
+        .attr("y", (d, i) => paddingTop + i * cellSize + cellSize / 2)
+        .attr("text-anchor", "end")
+        .attr("dominant-baseline", "middle")
+        .attr("font-size", "13px")
+        .text(d => d);
+
+    // Column labels (top)
+// Column labels (top, rotated -45°)
+svg.selectAll(".col-label")
+    .data(features)
+    .enter()
+    .append("text")
+    .attr("class", "col-label")
+    .attr("transform", (d, i) => {
+        const x = 10 + paddingLeft + i * cellSize + cellSize / 2;
+        const y = paddingTop - 10;
+        return `translate(${x},${y}) rotate(20)`;
+    })
+    .attr("text-anchor", "end")
+    .attr("font-size", "13px")
+    .text(d => d);
+
+}
+
+
+
+
+        // Function to render scatter plot
+        function renderScatterPlot(container, data, xFeature, yFeature) {
+            // Clear previous plot
+            d3.select(container).selectAll("*").remove();
+            
+            // Set dimensions
+            const width = 500;
+            const height = 400;
+            const margin = { top: 40, right: 40, bottom: 60, left: 60 };
+            const innerWidth = width - margin.left - margin.right;
+            const innerHeight = height - margin.top - margin.bottom;
+            
+            // Create SVG
+            const svg = d3.select(container)
+                .append("svg")
+                .attr("width", width)
+                .attr("height", height);
+            
+            // Create scales
+            const xScale = d3.scaleLinear()
+                .domain(d3.extent(data, d => +d[xFeature]))
+                .range([0, innerWidth])
+                .nice();
+            
+            const yScale = d3.scaleLinear()
+                .domain(d3.extent(data, d => +d[yFeature]))
+                .range([innerHeight, 0])
+                .nice();
+            
+            // Create chart area
+            const chart = svg.append("g")
+                .attr("transform", `translate(${margin.left},${margin.top})`);
+            
+            // Add x-axis
+            chart.append("g")
+                .attr("transform", `translate(0,${innerHeight})`)
+                .call(d3.axisBottom(xScale))
+                .append("text")
+                .attr("class", "axis-label")
+                .attr("x", innerWidth / 2)
+                .attr("y", 40)
+                .attr("fill", "#000")
+                .text(xFeature);
+            
+            // Add y-axis
+            chart.append("g")
+                .call(d3.axisLeft(yScale))
+                .append("text")
+                .attr("class", "axis-label")
+                .attr("transform", "rotate(-90)")
+                .attr("y", -50)
+                .attr("x", -innerHeight / 2)
+                .attr("dy", "1em")
+                .attr("fill", "#000")
+                .text(yFeature);
+            
+            // Add points using proper enter/update pattern
+            chart.selectAll(".scatter-point")
+                .data(data)
+                .enter()
+                .append("circle")
+                .attr("class", "scatter-point")
+                .attr("cx", d => xScale(d[xFeature]))
+                .attr("cy", d => yScale(d[yFeature]))
+                .attr("r", 4)
+                .attr("fill", "#3182ce")
+                .on("mouseover", function(event, d) {
+                    const tooltip = d3.select(".tooltip-correlation");
+                    tooltip
+                        .style("opacity", 1)
+                        .html(`<h3>Student ${d.student_ID}</h3>
+                               <p>${xFeature}: <span class="value">${d[xFeature]}</span></p>
+                               <p>${yFeature}: <span class="value">${d[yFeature]}</span></p>`)
+                        .style("left", (event.pageX + 10) + "px")
+                        .style("top", (event.pageY - 30) + "px");
+                    
+                    d3.select(this).attr("r", 6).attr("fill-opacity", 1);
+                })
+                .on("mouseout", function() {
+                    d3.select(".tooltip-correlation").style("opacity", 0);
+                    d3.select(this).attr("r", 4).attr("fill-opacity", 0.7);
+                });
+            
+            // Add chart title
+            chart.append("text")
+                .attr("x", innerWidth / 2)
+                .attr("y", -10)
+                .attr("text-anchor", "middle")
+                .style("font-size", "16px")
+                .style("font-weight", "bold")
+                .text(`${xFeature} vs ${yFeature}`);
+            
+            // Calculate and add regression line
+            const xValues = data.map(d => +d[xFeature]);
+            const yValues = data.map(d => +d[yFeature]);
+            const n = xValues.length;
+            
+            let sumX = 0, sumY = 0, sumXY = 0, sumX2 = 0;
+            for (let i = 0; i < n; i++) {
+                sumX += xValues[i];
+                sumY += yValues[i];
+                sumXY += xValues[i] * yValues[i];
+                sumX2 += xValues[i] * xValues[i];
+            }
+            
+            const slope = (n * sumXY - sumX * sumY) / (n * sumX2 - sumX * sumX);
+            const intercept = (sumY - slope * sumX) / n;
+            
+            const lineData = [
+                {x: xScale.domain()[0], y: slope * xScale.domain()[0] + intercept},
+                {x: xScale.domain()[1], y: slope * xScale.domain()[1] + intercept}
+            ];
+            
+            const line = d3.line()
+                .x(d => xScale(d.x))
+                .y(d => yScale(d.y));
+            
+            chart.append("path")
+                .datum(lineData)
+                .attr("class", "regression-line")
+                .attr("d", line);
+        }
+
+        // Global variable for student data
+        let studentData = [];
+
+        // Function to process and visualize data
+        function processAndVisualizeData(data) {
+    // Convert relevant columns to numeric
+    studentData = data.map(d => {
+        return {
+            student_ID: d.Student_ID,
+            age: +d.Age,
+            usage_hours: +d.Avg_Daily_Usage_Hours,
+            sleep_hours: +d.Sleep_Hours_Per_Night,
+            mental_health: +d.Mental_Health_Score,
+            conflicts: +d.Conflicts_Over_Social_Media,
+            addicted_score: +d.Addicted_Score
+        };
+    });
+
+    const matrixData = createCorrelationMatrix(studentData);
+    renderCorrelationMatrix("#correlation-matrix", matrixData);
+
+    const features = matrixData.features;
+    if (features.length >= 2) {
+        renderScatterPlot("#scatter-plot", studentData, features[0], features[1]);
+        const initialCorr = matrixData.matrix[0][1];
+        document.getElementById("correlation-value").innerHTML = 
+            `Correlation between ${features[0]} and ${features[1]}: ${initialCorr.toFixed(2)}`;
+    }
+}
+
+
+        // Load CSV data when page loads
+        document.addEventListener("DOMContentLoaded", function() {
+            
+            // Parse sample CSV data
+            d3.csv("Students Social Media Addiction.csv").then(parsedData => {
+    processAndVisualizeData(parsedData);
+}).catch(error => {
+    document.getElementById("correlation-matrix").innerHTML = 
+        `<div class="error">Failed to load CSV: ${error.message}</div>`;
+});
+        
+        });
+    </script>
+</body>
+</html>
